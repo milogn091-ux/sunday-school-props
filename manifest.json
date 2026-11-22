@@ -1,0 +1,16 @@
+{
+ "name": "主日學手機教具",
+ "short_name": "主日學教具",
+ "start_url": "./",
+ "display": "standalone",
+ "background_color": "#f5f5f7",
+ "theme_color": "#ffffff",
+ "icons": [
+  {
+   "src": "phone-icon.png",
+   "sizes": "180x180",
+   "type": "image/png"
+  }
+ ],
+ "scope": "./"
+}
