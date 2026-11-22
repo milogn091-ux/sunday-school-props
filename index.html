@@ -105,6 +105,20 @@ details.lead[open] summary .chev { transform:rotate(90deg); }
 @keyframes beat { to { transform:scale(1.05); } }
 .music-name { text-align:center; font-size:17px; font-weight:600; margin-top:18px; padding:0 20px; }
 .music-sub { text-align:center; font-size:13px; opacity:.7; margin-top:4px; }
+.music-art.small { width:min(44vw,24vh); height:min(44vw,24vh); font-size:min(18vw,10vh); }
+.chips { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:4px 16px 0; }
+.chip { min-height:46px; padding:6px 6px; border-radius:14px; background:rgba(255,255,255,.2); color:#fff; font-weight:600; font-size:13px; display:flex; align-items:center; justify-content:center; gap:5px; line-height:1.2; }
+.chip span { font-size:18px; }
+.chip.on { background:#fff; color:#000; }
+.tb-setup { flex:1; overflow-y:auto; padding:4px 16px 8px; }
+.tb-h { font-size:13px; font-weight:700; opacity:.85; margin:14px 4px 8px; }
+.tb-row { display:block; width:100%; text-align:left; background:rgba(255,255,255,.18); border-radius:14px; padding:12px 14px; margin-bottom:8px; color:#fff; border:2px solid transparent; }
+.tb-row b { display:block; font-size:17px; }
+.tb-row small { display:block; font-size:13px; opacity:.85; margin-top:2px; }
+.tb-row.on { background:#fff; color:#000; }
+.tb-note { font-size:13px; opacity:.85; line-height:1.6; margin:12px 4px 0; }
+.tb-phase { font-size:min(12vw,7vh); font-weight:900; position:relative; z-index:1; margin-bottom:1vh; }
+.tb-next { font-size:16px; font-weight:600; opacity:.85; margin-top:1.5vh; position:relative; z-index:1; }
 .flash { animation:flash .5s 3; }
 @keyframes flash { 50% { background:#ff3b30; } }
 .toast { position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom) + 24px); transform:translateX(-50%); background:rgba(0,0,0,.82); color:#fff; padding:10px 16px; border-radius:12px; font-size:14px; z-index:100; max-width:86vw; text-align:center; }
@@ -125,7 +139,7 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const AID = {
   countdown: { ic: '⏱️', name: '倒數計時' }, counter: { ic: '🏆', name: '計分板' }, colorCall: { ic: '🎨', name: '顏色指令' },
-  wordCards: { ic: '🔤', name: '字卡' }, randomPick: { ic: '🎲', name: '抽號碼' }, music: { ic: '🎵', name: '背景音樂' }
+  wordCards: { ic: '🔤', name: '字卡' }, randomPick: { ic: '🎲', name: '抽號碼' }, music: { ic: '🎵', name: '背景音樂' }, tabata: { ic: '🔥', name: 'Tabata 間歇' }
 };
 let lesson = null, cur = 0;
 
@@ -214,7 +228,9 @@ function renderHome() {
       ${tool('🎲', '抽號碼', `1～${L.kids || 10} 號`, "openTool('randomPick')")}
       ${tool('🏆', '計分板', '兩隊加分', "openTool('counter')")}
       ${tool('⏱️', '倒數計時', '60 秒', "openTool('countdown',{seconds:60})")}
-      ${tool('🎵', '背景音樂', '選手機裡的歌', "openTool('music')")}
+      ${tool('🎵', '背景音樂', '9 首內建音樂', "openTool('music')")}
+      ${tool('🔥', 'Tabata', '動 20 休 10・有音樂', "openTool('tabata')")}
+      ${tool('🎨', '顏色指令', '看顏色做動作', "openTool('colorCall')")}
     </div>
     ${L.takeHome ? `<div class="group-title">帶回家的一句話</div><div class="callout">${esc(L.takeHome)}</div>` : ''}
     ${L.review?.length ? `<div class="group-title">複習問答</div><div class="list">${L.review.map((r, i) => `<div class="row" style="display:block"><b style="font-size:16px">Q${i + 1}. ${esc(r.q)}</b><div style="color:var(--text2);font-size:15px;margin-top:4px">${esc(r.a)}</div></div>`).join('')}</div>` : ''}
@@ -254,6 +270,8 @@ function renderStation() {
       ${tool('🔤', '字卡', '口訣一詞一張', "openTool('wordCards')")}
       ${tool('🎲', '抽號碼', '決定誰先', "openTool('randomPick')")}
       ${tool('🎵', '背景音樂', '音樂停就停', "openTool('music')")}
+      ${tool('🔥', 'Tabata', '間歇運動＋音樂', "openTool('tabata')")}
+      ${tool('📣', '倒數 3 2 1', '嗶嗶嗶—開始', 'SFX.countIn()')}
     </div>
     <div class="group-title">音效</div>
     <div class="sfx">
@@ -261,6 +279,10 @@ function renderStation() {
       <button onclick="SFX.ding()"><span class="ic">🔔</span>答對</button>
       <button onclick="SFX.clap()"><span class="ic">👏</span>掌聲</button>
       <button onclick="SFX.drum()"><span class="ic">🥁</span>鼓聲</button>
+      <button onclick="SFX.wrong()"><span class="ic">❌</span>答錯</button>
+      <button onclick="SFX.fanfare()"><span class="ic">🎉</span>勝利</button>
+      <button onclick="SFX.whoosh()"><span class="ic">💨</span>咻</button>
+      <button onclick="SFX.pop()"><span class="ic">✨</span>加分</button>
     </div>
     <details class="lead">
       <summary>帶領說明 <span class="chev">›</span></summary>
@@ -280,7 +302,7 @@ function openTool(kind, opt = {}) {
   unlockAudio(); keepAwake();
   if (cleanup) cleanup(); cleanup = null;
   full.classList.remove('hidden');
-  ({ poster, countdown, counter, colorCall, wordCards, randomPick, music })[kind](opt);
+  ({ poster, countdown, counter, colorCall, wordCards, randomPick, music, tabata })[kind](opt);
 }
 function bar(title, right = '') { return `<div class="full-bar"><button class="x" onclick="closeFull()">✕</button><span class="full-title">${esc(title)}</span><span>${right || '<span style="width:40px;display:inline-block"></span>'}</span></div>`; }
 function sName() { return lesson && $('#station').classList.contains('hidden') ? '' : st()?.name || ''; }
@@ -425,34 +447,140 @@ function randomPick() {
   draw();
 }
 
-// 背景音樂：選手機裡的歌（存在這支手機上），可設「隨機停」玩大風吹
+// 背景音樂：內建 9 首原創合成音樂（不用網路），也可以選手機裡的歌；可設「隨機停」玩大風吹
 function music() {
   const key = sName() ? 'music-' + st().number : 'music-common';
   const audio = $('#audio');
-  let stopTimer = 0, stopMode = false, beat = null;
-  full.style.background = 'linear-gradient(160deg,#ff375f,#ff9f0a)';
-  const draw = async () => {
-    const rec = await idbGet(key) || await idbGet('music-common');
-    const has = !!rec;
+  let sel = localStorage.getItem('musicTrack') || 'dance';
+  let stopTimer = 0, stopMode = false, player = null, rec = null;
+  const playing = () => !!player || !audio.paused;
+  const draw = () => {
+    if (sel === 'mine' && !rec) sel = 'dance';
+    const t = sel === 'mine' ? { name: rec.name, ic: '📱', sub: '手機裡的歌', bg: 'linear-gradient(160deg,#ff375f,#ff9f0a)', bpm: 100 } : TRACKS[sel];
+    full.style.background = t.bg;
+    const chips = Object.entries(TRACKS).filter(([, x]) => !x.hidden).map(([id, x]) => `<button class="chip ${sel === id ? 'on' : ''}" onclick="muSel('${id}')"><span>${x.ic}</span>${x.name}</button>`).join('')
+      + (rec ? `<button class="chip ${sel === 'mine' ? 'on' : ''}" onclick="muSel('mine')"><span>📱</span>${esc(rec.name.slice(0, 6))}</button>` : '');
     full.innerHTML = bar(sName() ? `${sName()}・音樂` : '背景音樂', `<button class="pill ${stopMode ? 'on' : ''}" onclick="muStop()">隨機停</button>`) + `
-      <div class="full-main" style="flex-direction:column"><div class="music-art ${audio.paused && !beat ? '' : 'playing'}" id="ma">${has ? '🎵' : '🥁'}</div>
-        <div class="music-name">${has ? esc(rec.name) : '還沒選歌，先用內建節奏'}</div>
-        <div class="music-sub">${stopMode ? '音樂會在 5～15 秒之間突然停，孩子要馬上停住！' : '按「隨機停」可以玩音樂停就停'}</div></div>
-      <div class="ctrl"><button onclick="muPick()">${has ? '換一首' : '選手機裡的歌'}</button><button class="primary" id="mp" onclick="muPlay()">${audio.paused && !beat ? '播放' : '暫停'}</button></div>`;
-    if (has && audio.dataset.key !== rec.name) { if (audio.src) URL.revokeObjectURL(audio.src); audio.src = URL.createObjectURL(rec.blob); audio.dataset.key = rec.name; }
-    window.__hasSong = has;
+      <div class="full-main" style="flex-direction:column"><div class="music-art small ${playing() ? 'playing' : ''}" style="animation-duration:${(60 / t.bpm).toFixed(2)}s">${t.ic}</div>
+        <div class="music-name">${esc(t.name)}</div>
+        <div class="music-sub">${stopMode ? '音樂會在 5～15 秒之間突然停，孩子要馬上停住！' : esc(t.sub)}</div></div>
+      <div class="chips">${chips}</div>
+      <div class="ctrl"><button onclick="muPick()">${rec ? '換手機裡的歌' : '📱 選手機裡的歌'}</button><button class="primary" onclick="muPlay()">${playing() ? '暫停' : '播放'}</button></div>`;
   };
-  const stopAll = () => { audio.pause(); if (beat) { beat.stop(); beat = null; } clearTimeout(stopTimer); };
-  const armStop = () => { clearTimeout(stopTimer); if (stopMode) stopTimer = setTimeout(() => { stopAll(); SFX.whistle(); draw(); toast('停！'); }, 5000 + Math.random() * 10000); };
-  window.muPlay = () => {
-    if (!audio.paused || beat) { stopAll(); draw(); return; }
-    if (window.__hasSong) audio.play().catch(() => toast('無法播放這個檔案'));
-    else beat = SFX.beatLoop();
-    armStop(); draw();
+  const stopAll = () => { audio.pause(); if (player) { player.stop(); player = null; } clearTimeout(stopTimer); };
+  const armStop = () => { clearTimeout(stopTimer); if (stopMode && playing()) stopTimer = setTimeout(() => { stopAll(); SFX.whistle(); draw(); toast('停！'); }, 5000 + Math.random() * 10000); };
+  const start = () => {
+    if (sel === 'mine') {
+      if (audio.dataset.key !== rec.name) { if (audio.src) URL.revokeObjectURL(audio.src); audio.src = URL.createObjectURL(rec.blob); audio.dataset.key = rec.name; }
+      audio.play().catch(() => toast('無法播放這個檔案'));
+    } else player = startTrack(sel);
   };
+  window.muPlay = () => { if (playing()) { stopAll(); draw(); return; } start(); armStop(); draw(); };
+  window.muSel = (id) => { const was = playing(); stopAll(); sel = id; try { localStorage.setItem('musicTrack', id); } catch {} start(); armStop(); draw(); };
   window.muStop = () => { stopMode = !stopMode; armStop(); draw(); };
-  window.muPick = () => { const f = $('#musicFile'); f.onchange = async () => { const file = f.files[0]; f.value = ''; if (!file) return; stopAll(); await idbSet(key, { name: file.name.replace(/\.[^.]+$/, ''), blob: file }); if (key !== 'music-common' && !(await idbGet('music-common'))) await idbSet('music-common', { name: file.name.replace(/\.[^.]+$/, ''), blob: file }); toast('已存在這支手機，下次直接播放'); draw(); }; f.click(); };
+  window.muPick = () => { const f = $('#musicFile'); f.onchange = async () => { const file = f.files[0]; f.value = ''; if (!file) return; stopAll(); rec = { name: file.name.replace(/\.[^.]+$/, ''), blob: file }; await idbSet(key, rec); if (key !== 'music-common' && !(await idbGet('music-common'))) await idbSet('music-common', rec); sel = 'mine'; toast('已存在這支手機，下次直接播放'); draw(); }; f.click(); };
+  audio.onended = () => draw();
   draw();
+  (async () => { rec = await idbGet(key) || await idbGet('music-common'); draw(); })();
+  cleanup = stopAll;
+}
+
+// Tabata 間歇運動：動 → 休 → 動…，運動時播高能音樂，休息自動換輕柔音樂，最後 3 秒嗶嗶
+const TABATA_PRESETS = [
+  { name: '標準 Tabata', work: 20, rest: 10, rounds: 8 },
+  { name: '兒童輕鬆版', work: 15, rest: 15, rounds: 6 },
+  { name: '挑戰版', work: 30, rest: 15, rounds: 6 },
+  { name: '暖身版', work: 40, rest: 20, rounds: 4 }
+];
+function tabata() {
+  let cfg = { p: 0, track: 'tabata', custom: null };
+  try { cfg = Object.assign(cfg, JSON.parse(localStorage.getItem('tabata'))); } catch {}
+  let iv = 0, player = null;
+  const plan = () => (cfg.p === -1 && cfg.custom) || TABATA_PRESETS[cfg.p] || TABATA_PRESETS[0];
+  const fmt = (s) => s >= 60 ? `${Math.floor(s / 60)} 分${s % 60 ? ' ' + (s % 60) + ' 秒' : '鐘'}` : s + ' 秒';
+  const switchTrack = (id) => { if (player && player.id === id) return; if (player) player.stop(); player = id ? startTrack(id) : null; };
+  const stopAll = () => { clearInterval(iv); iv = 0; switchTrack(null); };
+  const save = () => { try { localStorage.setItem('tabata', JSON.stringify(cfg)); } catch {} };
+
+  const setup = () => {
+    stopAll();
+    full.style.background = 'linear-gradient(160deg,#ff453a,#ff9f0a)';
+    const opt = (p, i) => { const tot = p.work * p.rounds + p.rest * (p.rounds - 1); return `<button class="tb-row ${cfg.p === i ? 'on' : ''}" onclick="tbPick(${i})"><b>${esc(p.name)}</b><small>動 ${p.work} 秒・休 ${p.rest} 秒・${p.rounds} 回（約 ${fmt(tot)}）</small></button>`; };
+    const energy = ['tabata', 'sprint', 'dance', 'march', 'kids', 'groove'];
+    full.innerHTML = bar('Tabata 間歇運動') + `
+      <div class="tb-setup">
+        <div class="tb-h">選時間</div>
+        ${TABATA_PRESETS.map(opt).join('')}
+        ${opt(cfg.custom || { name: '自訂', work: 20, rest: 10, rounds: 8 }, -1).replace('onclick="tbPick(-1)"', 'onclick="tbCustom()"')}
+        <div class="tb-h">運動時的音樂</div>
+        <div class="chips" style="padding:0">${energy.map((id) => `<button class="chip ${cfg.track === id ? 'on' : ''}" onclick="tbTrack('${id}')"><span>${TRACKS[id].ic}</span>${TRACKS[id].name}</button>`).join('')}<button class="chip ${cfg.track === '' ? 'on' : ''}" onclick="tbTrack('')"><span>🔇</span>不要音樂</button></div>
+        <div class="tb-note">開始前有 10 秒準備。休息時會換成輕柔音樂，每段最後 3 秒會嗶嗶提醒。手機音量記得開大。</div>
+      </div>
+      <div class="ctrl"><button class="primary" onclick="tbGo()">開始</button></div>`;
+  };
+  window.tbPick = (i) => { cfg.p = i; save(); setup(); };
+  window.tbCustom = () => {
+    const w = parseInt(prompt('每回運動幾秒？', cfg.custom?.work || 20)); if (!(w > 0)) return;
+    const r = parseInt(prompt('每回休息幾秒？', cfg.custom?.rest ?? 10)); if (!(r >= 0)) return;
+    const n = parseInt(prompt('總共幾回？', cfg.custom?.rounds || 8)); if (!(n > 0)) return;
+    cfg.custom = { name: '自訂', work: w, rest: r, rounds: n }; cfg.p = -1; save(); setup();
+  };
+  window.tbTrack = (id) => { cfg.track = id; save(); if (player) switchTrack(null); if (id) { player = startTrack(id); setTimeout(() => { if (!iv) switchTrack(null); }, 2500); } setup(); };
+
+  window.tbGo = () => {
+    unlockAudio(); keepAwake();
+    const P = plan();
+    const phases = [{ k: 'prep', d: 10 }];
+    for (let r = 1; r <= P.rounds; r++) { phases.push({ k: 'work', d: P.work, r }); if (r < P.rounds && P.rest > 0) phases.push({ k: 'rest', d: P.rest, r }); }
+    const LOOK = { prep: ['準備', '#ff9f0a'], work: ['動起來！', '#ff3b30'], rest: ['休息', '#0a84ff'] };
+    let idx = 0, end = 0, paused = 0, last = -1;
+    const draw = () => {
+      const ph = phases[idx], nx = phases[idx + 1];
+      full.style.background = LOOK[ph.k][1];
+      full.innerHTML = bar('Tabata', `<span class="pill" style="display:inline-flex;align-items:center">${ph.r ? `第 ${ph.r} / ${P.rounds} 回` : '準備'}</span>`) + `
+        <div class="full-main" style="flex-direction:column">
+          <div class="tb-phase">${LOOK[ph.k][0]}</div>
+          <svg class="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="4"/>
+            <circle id="tr" cx="50" cy="50" r="46" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="0" transform="rotate(-90 50 50)"/></svg>
+          <div class="big-num" id="tn">${ph.d}</div>
+          <div class="tb-next">${nx ? `下一個：${LOOK[nx.k][0].replace('！', '')} ${nx.d} 秒` : '最後一段，加油！'}</div>
+        </div>
+        <div class="dots">${Array.from({ length: P.rounds }, (_, k) => `<i class="${ph.r && k < ph.r ? 'on' : ''}"></i>`).join('')}</div>
+        <div class="ctrl"><button onclick="tbStopAsk()">結束</button><button class="primary" id="tp" onclick="tbPause()">${paused ? '繼續' : '暫停'}</button><button onclick="tbSkip()">跳過 ›</button></div>`;
+    };
+    const begin = (i) => {
+      idx = i; last = -1; const ph = phases[i];
+      end = performance.now() + ph.d * 1000;
+      if (ph.k === 'work') { SFX.whistle(); switchTrack(cfg.track); }
+      else if (ph.k === 'rest') { SFX.ding(); switchTrack(cfg.track ? 'rest' : null); speak('休息'); }
+      else { switchTrack(cfg.track ? 'rest' : null); speak('準備'); }
+      draw();
+    };
+    const finish = () => {
+      stopAll(); SFX.fanfare();
+      full.style.background = 'linear-gradient(160deg,#30d158,#0a84ff)';
+      full.innerHTML = bar('Tabata') + `<div class="full-main" style="flex-direction:column"><div style="font-size:90px">🎉</div><div class="tb-phase">完成！</div><div class="tb-next">${P.rounds} 回全部做完，大家好棒！</div></div>
+        <div class="ctrl"><button onclick="tbSetup()">換設定</button><button class="primary" onclick="tbGo()">再一次</button></div>`;
+    };
+    const tick = () => {
+      if (paused) return;
+      const now = performance.now(), ph = phases[idx];
+      if (now >= end) { if (idx + 1 < phases.length) begin(idx + 1); else finish(); return; }
+      const left = Math.ceil((end - now) / 1000);
+      const ring = $('#tr'); if (ring) ring.style.strokeDashoffset = 289 * (1 - (end - now) / (ph.d * 1000));
+      if (left !== last) { last = left; const n = $('#tn'); if (n) n.textContent = left; if (left <= 3) SFX.beep(left === 1 ? 1320 : 880); }
+    };
+    window.tbPause = () => {
+      if (paused) { end = performance.now() + paused; paused = 0; const ph = phases[idx]; switchTrack(ph.k === 'work' ? cfg.track : cfg.track ? 'rest' : null); }
+      else { paused = end - performance.now(); switchTrack(null); }
+      const b = $('#tp'); if (b) b.textContent = paused ? '繼續' : '暫停';
+    };
+    window.tbSkip = () => { paused = 0; if (idx + 1 < phases.length) begin(idx + 1); else finish(); };
+    window.tbStopAsk = () => { if (confirm('結束這次 Tabata？')) setup(); };
+    clearInterval(iv); begin(0); iv = setInterval(tick, 100);
+  };
+  window.tbSetup = setup;
+  setup();
   cleanup = stopAll;
 }
 
@@ -468,9 +596,30 @@ function speak(text) {
 }
 function speakMotto() { const s = st(); speak(s.motto || s.name); toast('🗣️ ' + (s.motto || s.name)); }
 
-// ───── 音效（手機即時合成，不用下載） ─────
-let AC = null;
-function unlockAudio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch {} } if (AC?.state === 'suspended') AC.resume(); }
+// ───── 音效與音樂（手機即時合成，不用下載、沒網路也能響） ─────
+// iPhone 的靜音鍵會把網頁音效關掉：用「播放模式」或一段無聲音檔，讓教具在靜音鍵開著時也有聲音
+let AC = null, NOISE = null, silentEl = null, silentUrl = '';
+function silentWav() {
+  if (silentUrl) return silentUrl;
+  const n = 8000, b = new ArrayBuffer(44 + n), v = new DataView(b), w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+  return (silentUrl = URL.createObjectURL(new Blob([b], { type: 'audio/wav' })));
+}
+function unlockAudio() {
+  try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch {}
+  if (!AC || AC.state === 'closed') { try { AC = new (window.AudioContext || window.webkitAudioContext)(); NOISE = null; } catch {} }
+  if (AC && AC.state !== 'running') { try { AC.resume(); } catch {} }
+  if (!navigator.audioSession && $('#audio').paused) {
+    try {
+      if (!silentEl) { silentEl = new Audio(silentWav()); silentEl.loop = true; silentEl.setAttribute('playsinline', ''); }
+      if (silentEl.paused) silentEl.play().catch(() => {});
+    } catch {}
+  }
+}
+document.addEventListener('touchend', unlockAudio, { passive: true });
+document.addEventListener('click', unlockAudio, true);
 function tone(freq, start, dur, type = 'sine', vol = 0.3, slide) {
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = type; o.frequency.setValueAtTime(freq, AC.currentTime + start);
@@ -494,13 +643,130 @@ const SFX = {
     g.gain.setValueAtTime(0.25, AC.currentTime + 0.6); g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + 0.75);
     o.connect(g).connect(AC.destination); o.start(); l.start(); o.stop(AC.currentTime + 0.8); l.stop(AC.currentTime + 0.8); },
   ding() { unlockAudio(); if (!AC) return; tone(1046, 0, 0.5, 'sine', 0.35); tone(1568, 0.12, 0.7, 'sine', 0.3); },
+  wrong() { unlockAudio(); if (!AC) return; tone(392, 0, 0.22, 'square', 0.15, 330); tone(262, 0.24, 0.5, 'square', 0.15, 196); },
   pop() { unlockAudio(); if (!AC) return; tone(660, 0, 0.12, 'triangle', 0.3, 990); },
   tick() { unlockAudio(); if (!AC) return; tone(1200, 0, 0.06, 'square', 0.12); },
+  beep(f = 880) { unlockAudio(); if (!AC) return; tone(f, 0, f > 1000 ? 0.4 : 0.15, 'sine', 0.4); },
   buzzer() { unlockAudio(); if (!AC) return; tone(330, 0, 0.35, 'sawtooth', 0.25); tone(330, 0.45, 0.6, 'sawtooth', 0.25); },
   clap() { unlockAudio(); if (!AC) return; for (let i = 0; i < 28; i++) noise(i * 0.07 + Math.random() * 0.05, 0.08, 0.25 + Math.random() * 0.2, 1200); },
   drum() { unlockAudio(); if (!AC) return; for (let i = 0; i < 18; i++) noise(i * 0.055, 0.06, 0.12 + i * 0.012, 300); tone(90, 1.0, 0.5, 'sine', 0.6, 50); noise(1.0, 0.4, 0.4, 2000); },
-  beatLoop() { unlockAudio(); if (!AC) return null; let n = 0; const id = setInterval(() => { const k = n % 4; tone(k % 2 ? 180 : 70, 0, 0.18, 'sine', 0.6, k % 2 ? 120 : 45); noise(0, 0.05, k % 2 ? 0.25 : 0.08, 5000); if (n % 8 === 6) tone(523, 0, 0.15, 'triangle', 0.15); n++; }, 300); return { stop: () => clearInterval(id) }; }
+  fanfare() { unlockAudio(); if (!AC) return; [[523, 0], [659, 0.14], [784, 0.28], [1046, 0.42]].forEach(([f, t]) => tone(f, t, 0.18, 'triangle', 0.3)); [523, 659, 784, 1046].forEach((f) => tone(f, 0.6, 1.2, 'triangle', 0.16)); },
+  countIn() { unlockAudio(); if (!AC) return; tone(880, 0, 0.15, 'sine', 0.4); tone(880, 1, 0.15, 'sine', 0.4); tone(880, 2, 0.15, 'sine', 0.4); tone(1320, 3, 0.6, 'sine', 0.45); },
+  whoosh() { unlockAudio(); if (!AC) return; tone(250, 0, 0.45, 'sine', 0.3, 1800); noise(0, 0.4, 0.15, 3000); }
 };
+
+// ───── 內建音樂：全部是程式即時產生的原創旋律（不是任何現成歌曲），不用網路 ─────
+const NOTE = (m) => 440 * Math.pow(2, (m - 69) / 12);
+const SCALE = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10], penta: [0, 2, 4, 7, 9] };
+// 每個字代表一個 16 分音符：x＝重、o＝輕、.＝不打
+const TRACKS = {
+  tabata: { name: 'Tabata 高能', ic: '🔥', sub: '140 拍・運動間歇最適合', bg: 'linear-gradient(160deg,#ff3b30,#ff9f0a)', bpm: 140, key: 57, scale: 'minor', prog: [[0, 'm'], [8, 'M'], [3, 'M'], [10, 'M']],
+    kick: 'x...x...x...x...', clap: '....x.......x...', hat: 'o.x.o.x.o.x.o.x.', bass: 'x.xxx.xxx.xxx.xx', bassWave: 'sawtooth', bassOct: true, lead: 'x..x..x.x.x..x..', leadWave: 'square', seed: 11 },
+  sprint: { name: '快速衝刺', ic: '⚡', sub: '165 拍・接力、搶快', bg: 'linear-gradient(160deg,#ff9f0a,#ffd60a)', bpm: 165, key: 64, scale: 'minor', prog: [[0, 'm'], [10, 'M'], [8, 'M'], [10, 'M']],
+    kick: 'x...x...x...x...', snare: '....x.......x.o.', hat: 'oooooooooooooooo', bass: 'x.x.x.x.x.x.x.x.', bassWave: 'sawtooth', lead: 'x.x.x.x.x.x.xx..', leadWave: 'square', seed: 23 },
+  dance: { name: '活力舞曲', ic: '💃', sub: '124 拍・熱場、跳舞', bg: 'linear-gradient(160deg,#bf5af2,#ff375f)', bpm: 124, key: 60, scale: 'major', prog: [[0, 'M'], [7, 'M'], [9, 'm'], [5, 'M']],
+    kick: 'x...x...x...x...', clap: '....x.......x...', openHat: '..x...x...x...x.', bass: '..x...x...x...x.', bassWave: 'sawtooth', stab: '...x..x....x..x.', lead: 'x.x.x...x.x.x...', lead2: 'x.x.x.x.x...x...', leadWave: 'square', seed: 5 },
+  kids: { name: '歡樂童謠', ic: '🎈', sub: '112 拍・幼兒、律動', bg: 'linear-gradient(160deg,#30d158,#64d2ff)', bpm: 112, key: 65, scale: 'penta', prog: [[0, 'M'], [9, 'm'], [5, 'M'], [7, 'M']],
+    kick: 'x.......x.......', snare: '....x.......x...', hat: 'x.o.x.o.x.o.x.o.', bass: 'x.......x.......', bassWave: 'triangle', bassFifth: true, stab: '....x.......x...', lead: 'x.x.x.x.x...x...', lead2: 'x.x.x...x.x.x...', leadWave: 'triangle', seed: 3 },
+  march: { name: '進行曲', ic: '🥁', sub: '116 拍・出場、繞場', bg: 'linear-gradient(160deg,#0a84ff,#5e5ce6)', bpm: 116, key: 58, scale: 'major', prog: [[0, 'M'], [5, 'M'], [7, 'M'], [0, 'M']],
+    kick: 'x.......x.......', snare: 'x.ooo.o.x.ooo.o.', bass: 'x...x...x...x...', bassWave: 'triangle', bassFifth: true, stab: '..x...x...x...x.', lead: 'x...x.x.x...x...', lead2: 'x.x.x.x.x.......', leadWave: 'sawtooth', leadCut: 2200, seed: 17 },
+  groove: { name: '輕鬆律動', ic: '😎', sub: '100 拍・闖關、走位', bg: 'linear-gradient(160deg,#ff9f0a,#ff375f)', bpm: 100, key: 55, scale: 'major', prog: [[2, 'm'], [7, 'M'], [0, 'M'], [9, 'm']],
+    kick: 'x......x..x.....', snare: '....x.......x...', hat: 'x.o.x.o.x.o.x.oo', bass: 'x......x..x.....', bassWave: 'triangle', pad: true, lead: '..x.x.....x.x.x.', leadWave: 'triangle', seed: 29 },
+  mission: { name: '緊張任務', ic: '🕵️', sub: '96 拍・尋寶、搶答', bg: 'linear-gradient(160deg,#1c1c1e,#5e5ce6)', bpm: 96, key: 62, scale: 'minor', prog: [[0, 'm'], [8, 'M'], [5, 'm'], [7, 'M']],
+    kick: 'x.....x...x.....', snare: '....x.......x...', hat: '..o...o...o...o.', bass: 'x.x.x.x.x.x.x.x.', bassWave: 'square', bassCut: 500, lead: 'x.....x.x.......', leadWave: 'triangle', seed: 41 },
+  bounce: { name: '跳跳彈珠', ic: '🐸', sub: '132 拍・跳躍、追逐', bg: 'linear-gradient(160deg,#64d2ff,#30d158)', bpm: 132, key: 67, scale: 'penta', prog: [[0, 'M'], [5, 'M'], [0, 'M'], [7, 'M']],
+    kick: 'x...x...x...x...', snare: '....x.......x...', hat: '..x...x...x...x.', bass: 'x.x.x.x.x.x.x.x.', bassWave: 'triangle', bassOct: true, lead: 'x.xx..x.x.xx..x.', leadWave: 'square', leadCut: 3000, seed: 8 },
+  calm: { name: '安靜禱告', ic: '🌙', sub: '72 拍・收心、禱告、背經文', bg: 'linear-gradient(160deg,#1c1c1e,#3a3a5c)', bpm: 72, key: 60, scale: 'major', prog: [[0, 'M'], [9, 'm'], [5, 'M'], [7, 'M']],
+    pad: true, arp: 'x.x.x.x.x.x.x.x.', lead: 'x.......x.......', leadWave: 'sine', seed: 13 },
+  rest: { name: 'Tabata 休息', ic: '🧘', sub: '', bg: '#0a84ff', bpm: 140, key: 57, scale: 'minor', prog: [[0, 'm'], [8, 'M'], [3, 'M'], [10, 'M']], hidden: true, vol: 1.4,
+    hat: '..o...o...o...o.', pad: true, arp: 'x...x...x...x...' }
+};
+function rng(seed) { return () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296); }
+const pcOf = (m, key) => (((m - key) % 12) + 12) % 12;
+const chordPcs = (ch) => (ch[1] === 'm' ? [0, 3, 7] : [0, 4, 7]).map((x) => (x + ch[0]) % 12);
+// 依和弦與音階自動寫出一段 8 小節的原創旋律（A A' 結構，好記好跟）
+function buildMelody(t) {
+  if (!t.lead) return null;
+  const r = rng(t.seed), sc = new Set(SCALE[t.scale]), base = t.key + 12, lo = base - 3, hi = base + 14;
+  let prev = base + 4;
+  const makeBar = (b) => {
+    const ch = t.prog[b % t.prog.length], cp = chordPcs(ch), out = new Array(16).fill(null);
+    const rhy = b % 2 && t.lead2 ? t.lead2 : t.lead;
+    const ons = [...rhy].map((c, i) => (c === 'x' ? i : -1)).filter((i) => i >= 0);
+    ons.forEach((i, k) => {
+      const strong = i % 8 === 0;
+      let c = [];
+      for (let m = lo; m <= hi; m++) { const pc = pcOf(m, t.key); if (!sc.has(pc)) continue; if (strong && !cp.includes(pc)) continue; if (Math.abs(m - prev) <= 5) c.push(m); }
+      if (!c.length) for (let m = lo; m <= hi; m++) if (cp.includes(pcOf(m, t.key))) c.push(m);
+      const wts = c.map((m) => (m === prev ? 0.4 : 1 / Math.abs(m - prev)));
+      let x = r() * wts.reduce((a, b2) => a + b2, 0), pick = c[0];
+      for (let j = 0; j < c.length; j++) { x -= wts[j]; if (x <= 0) { pick = c[j]; break; } }
+      prev = pick;
+      out[i] = { m: pick, len: Math.min(4, (ons[k + 1] ?? 16) - i) };
+    });
+    return out;
+  };
+  const bars = [0, 1, 2, 3].map(makeBar);
+  bars.push(bars[0], bars[1], bars[2], makeBar(7));
+  return bars.flat();
+}
+function nbuf() {
+  if (!NOISE) { const len = AC.sampleRate; NOISE = AC.createBuffer(1, len, AC.sampleRate); const d = NOISE.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1; }
+  return NOISE;
+}
+const INST = {
+  kick(at, o, v) { const s = AC.createOscillator(), g = AC.createGain(); s.frequency.setValueAtTime(150, at); s.frequency.exponentialRampToValueAtTime(42, at + 0.13);
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.9 * v, at + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.3); s.connect(g).connect(o); s.start(at); s.stop(at + 0.32); },
+  hiss(at, o, dur, vol, type, freq) { const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(); s.buffer = nbuf(); f.type = type; f.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, at + dur); s.connect(f).connect(g).connect(o); s.start(at, Math.random() * 0.5); s.stop(at + dur + 0.02); },
+  snare(at, o, v) { INST.hiss(at, o, 0.16, 0.32 * v, 'highpass', 1400); const s = AC.createOscillator(), g = AC.createGain(); s.type = 'triangle'; s.frequency.setValueAtTime(220, at); s.frequency.exponentialRampToValueAtTime(140, at + 0.08);
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.22 * v, at + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.1); s.connect(g).connect(o); s.start(at); s.stop(at + 0.12); },
+  clap(at, o, v) { for (let k = 0; k < 3; k++) INST.hiss(at + k * 0.011, o, k === 2 ? 0.15 : 0.02, 0.3 * v, 'bandpass', 1600); },
+  hat(at, o, v, open) { INST.hiss(at, o, open ? 0.16 : 0.035, 0.1 * v, 'highpass', 7500); },
+  note(at, o, m, dur, wave, vol, cut) { const s = AC.createOscillator(), g = AC.createGain(); s.type = wave; s.frequency.setValueAtTime(NOTE(m), at); let n = s;
+    if (cut) { const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cut; s.connect(f); n = f; }
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.008); g.gain.setTargetAtTime(0.0001, at + dur * 0.6, dur * 0.2 + 0.02);
+    n.connect(g).connect(o); s.start(at); s.stop(at + dur + 0.4); },
+  pad(at, o, ms, dur, vol) { ms.forEach((m) => [-7, 7].forEach((dt) => { const s = AC.createOscillator(), f = AC.createBiquadFilter(), g = AC.createGain(); s.type = 'sawtooth'; s.frequency.value = NOTE(m); s.detune.value = dt; f.type = 'lowpass'; f.frequency.value = 900;
+    g.gain.setValueAtTime(0.0001, at); g.gain.linearRampToValueAtTime(vol, at + dur * 0.25); g.gain.setValueAtTime(vol, at + dur * 0.75); g.gain.linearRampToValueAtTime(0.0001, at + dur);
+    s.connect(f).connect(g).connect(o); s.start(at); s.stop(at + dur + 0.05); })); }
+};
+const lvl = (p, s) => (p ? (p[s] === 'x' ? 1 : p[s] === 'o' ? 0.45 : 0) : 0);
+function playStep(t, mel, step, at, o, sd) {
+  const s = step % 16, bar = Math.floor(step / 16), ch = t.prog[bar % t.prog.length];
+  const root = t.key + ch[0], tri = (ch[1] === 'm' ? [0, 3, 7] : [0, 4, 7]).map((x) => root + x);
+  let v;
+  if ((v = lvl(t.kick, s))) INST.kick(at, o, v);
+  if ((v = lvl(t.snare, s))) INST.snare(at, o, v);
+  if ((v = lvl(t.clap, s))) INST.clap(at, o, v);
+  if ((v = lvl(t.hat, s))) INST.hat(at, o, v, false);
+  if ((v = lvl(t.openHat, s))) INST.hat(at, o, v, true);
+  if ((v = lvl(t.bass, s))) {
+    let m = root - 12; while (m > t.key - 3) m -= 12; while (m < t.key - 15) m += 12;
+    const hitN = [...t.bass.slice(0, s)].filter((c) => c !== '.').length;
+    if (t.bassOct && hitN % 2) m += 12;
+    if (t.bassFifth && hitN % 2) m += 7;
+    INST.note(at, o, m, sd * 1.6, t.bassWave || 'sawtooth', 0.22 * v, t.bassCut || 700);
+  }
+  if ((v = lvl(t.stab, s))) tri.forEach((m) => INST.note(at, o, m, sd * 1.4, 'triangle', 0.06 * v));
+  if (t.pad && s === 0) INST.pad(at, o, tri, sd * 16, 0.035);
+  if ((v = lvl(t.arp, s))) { const ns = [...tri, tri[0] + 12, tri[1] + 12]; const k = [...t.arp.slice(0, s)].filter((c) => c !== '.').length; INST.note(at, o, ns[k % ns.length] + 12, sd * 3, 'triangle', 0.07 * v); }
+  const n = mel && mel[step % mel.length];
+  if (n) INST.note(at, o, n.m, sd * n.len * 0.95, t.leadWave || 'square', t.leadWave === 'square' || t.leadWave === 'sawtooth' ? 0.07 : 0.14, t.leadCut);
+}
+// 開始播一首內建音樂，回傳 { stop() }
+function startTrack(id) {
+  unlockAudio(); if (!AC) return null;
+  const t = TRACKS[id]; if (!t) return null;
+  const out = AC.createGain(), mel = buildMelody(t), sd = 60 / t.bpm / 4;
+  const comp = AC.createDynamicsCompressor(); comp.threshold.value = -10; comp.knee.value = 6; comp.ratio.value = 8; comp.attack.value = 0.003; comp.release.value = 0.15;
+  out.gain.setValueAtTime(0.0001, AC.currentTime); out.gain.exponentialRampToValueAtTime(0.8 * (t.vol || 1), AC.currentTime + 0.25); out.connect(comp).connect(AC.destination);
+  let step = 0, next = AC.currentTime + 0.08;
+  const pump = () => { if (next < AC.currentTime) next = AC.currentTime + 0.02; while (next < AC.currentTime + 0.25) { playStep(t, mel, step, next, out, sd); next += sd; step++; } };
+  pump();
+  const iv = setInterval(pump, 50);
+  return { id, stop() { clearInterval(iv); try { out.gain.cancelScheduledValues(AC.currentTime); out.gain.setTargetAtTime(0.0001, AC.currentTime, 0.04); } catch {} setTimeout(() => { out.disconnect(); comp.disconnect(); }, 500); } };
+}
 
 // ───── 螢幕不要暗掉 ─────
 let wake = null;
